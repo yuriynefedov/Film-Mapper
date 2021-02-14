@@ -1,3 +1,13 @@
+"""
+
+Film Mapper Module
+
+Use this module to map the nearest movie filming spots for any location and year.
+
+(c) Yuriy Nefedov
+ 
+"""
+
 import random
 import pandas
 import folium
@@ -8,7 +18,11 @@ geolocator = geopy.Nominatim(user_agent="UCU OP Lab 2 Nefedov")
 
 CLOSEST_FILENAME = "closest10.csv"
 
+
 def gather_line_info(line):
+    """
+    Gathers movie's name, location and release year from locations.list line. 
+    """
     # print(line)
     try:
         movie_name = line.split("\"")[1]
@@ -40,47 +54,70 @@ def gather_line_info(line):
     # print("LOCATION:", location)
 
 
-def country_from_coordinates(coord_st):
+def country_from_coordinates(coord_st, last_how_many=1):
+    """
+    By the given coordinates, identifies the country (and, if requested, more detailed
+    region) of the location. 
+    """
     full_address = geolocator.reverse(coord_st, language="en").address
     # print("FULL ADDRESS:", full_address)
-    return full_address.split(",")[-1].strip()
+    return ",".join(full_address.split(",")[-last_how_many:]).strip()
 
 
 def filter_closest_movies(df: pandas.DataFrame, location: str, year, max_n=10):
-    country = country_from_coordinates(location)
-    if country == "United States":
-        country = "USA"
-    elif country == "United Kingdom":
-        country = "UK"
-    # print(year, country)
-
-    df = df[(df["Year"] == str(year)) & (df["Location"].str.endswith(country))]
-    # df = df[df["Year"] == str(year)]
+    """
+    Filters up to 10 nearest movies of given year and location and writes them into CLOSEST_FILENAME. 
+    """
+    for n_regions in range(3, 0, -1):
+        country = country_from_coordinates(location, last_how_many=n_regions)
+        print(country)
+        if "United States" in country:
+            country = country.replace("United States", "USA")
+        elif "United Kingdom" in country:
+            country = country.replace("United Kingdom", "UK")
+        # print(year, country)
+        filtered_df = df[(df["Year"] == str(year)) & (df["Location"].str.endswith(country))]
+        len_df = len(list(filtered_df["Movie"]))
+        print("Tried", n_regions, "regions, found", len_df, "movies")
+        if len_df >= 10:
+            break
+    # filtered_df = filtered_df[filtered_df["Year"] == str(year)]
     distances_to_input = []
     latitudes = []
     longitudes = []
-    df = df.head(10)
-    for item in df["Location"]:
+    addresses = []
+    # filtered_df = filtered_df.head(10)
+    for item in filtered_df["Location"]:
         try:
-            geocoded = geolocator.geocode(item)
-            latitude, longitude = [float(x.strip()) for x in location.split(", ")]
-            distances_to_input.append(haversine((geocoded.latitude, geocoded.longitude), (latitude, longitude)))
-            latitudes.append(geocoded.latitude)
-            longitudes.append(geocoded.longitude)
+            if item not in addresses:
+                geocoded = geolocator.geocode(item)
+                latitude, longitude = [float(x.strip()) for x in location.split(", ")]
+                distances_to_input.append(haversine((geocoded.latitude, geocoded.longitude), (latitude, longitude)))
+                latitudes.append(geocoded.latitude)
+                longitudes.append(geocoded.longitude)
+            else:
+                distances_to_input.append(None)
+                latitudes.append(None)
+                longitudes.append(None)
+            addresses.append(item)
+
         except AttributeError:
             print("ERROR in", item)
             distances_to_input.append(None)
             latitudes.append(None)
             longitudes.append(None)
-    df["Distance"] = distances_to_input
-    df["Latitude"] = latitudes
-    df["Longitude"] = longitudes
-    df.dropna(inplace=True, how="any")
+    filtered_df["Distance"] = distances_to_input
+    filtered_df["Latitude"] = latitudes
+    filtered_df["Longitude"] = longitudes
+    print("Before drop:", filtered_df)
+    filtered_df.dropna(inplace=True, how="any")
 
     movie_names = []
     movie_rows = []
-    df = df.sort_values(by=["Distance"])
-    for index, row in df.head(1000).iterrows():
+    filtered_df = filtered_df.sort_values(by=["Distance"])
+    print(filtered_df)
+    for index, row in filtered_df.head(1000).iterrows():
+        print(row)
         if not(any([movie_row["Movie"] == row["Movie"] for movie_row in movie_rows])) and row["Movie"] != "NaN" and row["Longitude"] != None:
             movie_rows.append(row)
             movie_names.append(row["Movie"])
@@ -93,6 +130,9 @@ def filter_closest_movies(df: pandas.DataFrame, location: str, year, max_n=10):
 
 
 def read_data(filename):
+    """
+    Reads a locations.csv file and writes the data into the DataFrame.
+    """
     print("Reading CSV...")
     data = open(filename, "r", encoding="latin1")
     csv_data = open("locations.csv", "w")
@@ -114,14 +154,22 @@ def read_data(filename):
 
 
 def change_coords_a_bit(coords, max_delta=0.05):
+    """
+    Used for fluctuating the given coordinates by max_delta.
+    The goal is to avoid overlapping pins on the map. 
+    """
     new_x = coords[0] + random.random()*max_delta*random.choice([-1, 1])
     new_y = coords[1] + random.random() * max_delta * random.choice([-1, 1])
     return new_x, new_y
 
 
 def build_map(closest_csv, aim_location):
+    """
+    Builds the map of a given location and pinpoints the closest filming spots. 
+    """
     print("Building a map at", aim_location, "...")
     data = pandas.read_csv(closest_csv, error_bad_lines=False).head(100)
+    print("Build data:", data)
     lat = data['Latitude']
     lon = data['Longitude']
     map = folium.Map(location=aim_location, zoom_start=10)
@@ -146,6 +194,9 @@ def build_map(closest_csv, aim_location):
 
 
 def main():
+    """
+    Main event sequence. Responsible for connecting the functions together. 
+    """
     df = read_data("locations.list")
     print(df.head(10))
     print("Read.\n_______")
@@ -157,5 +208,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    # from haversine import haversine
-    # print(haversine((90.000, 90.000), (-90.000, -90.000)))
