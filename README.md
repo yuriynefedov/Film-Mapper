@@ -26,6 +26,11 @@ Map generation taken care of automatically by [folium](https://python-visualizat
 HTML map consists of 3 layers (main, selected location pin, movie pins). Updates with each run of the script at map.html.
 
 
+## Goals and opportunities
+
+Use this module to pinpoint the nearest movie filming spots for any given location around the globe.
+It helps not only browse through the movies filmed in any country and period of time, but also visualise the moviemaking history both geographically and chronologically. Film Mapper can also provide high-quality HTML data for by-hand analysis of movies in their relation to countries, continents and time periods.
+
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
