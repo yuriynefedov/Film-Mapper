@@ -17,7 +17,7 @@ Building a map at [50.4420416584236, 30.518646242096857] ...
 Map saved at map.html
 ```
 
-![alt text](./Screenshot 2021-02-14 at 6.16.25 PM.png)
+![alt text](screenshot.png)
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
