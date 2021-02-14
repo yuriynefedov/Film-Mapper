@@ -19,5 +19,13 @@ Map saved at map.html
 
 ![alt text](screenshot.png)
 
+## HTML Structure
+
+Map generation taken care of automatically by [folium](https://python-visualization.github.io/folium/).
+
+HTML map consists of 3 layers (main, selected location pin, movie pins). Updates with each run of the script at map.html.
+
+
+
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
